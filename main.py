@@ -1,8 +1,6 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QListWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QListWidget, QVBoxLayout, QHBoxLayout
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5 import uic
-import pyperclip
-import sqlite3
 import sys
 
 
@@ -13,8 +11,16 @@ class QuoteBrowser(QMainWindow):
         super(QuoteBrowser, self).__init__()
         uic.loadUi('data/design.ui', self)
         self.con = QSqlDatabase.addDatabase("QSQLITE")
-        self.con.setDatabaseName('data/quotes.sqlite')
-        self.show_quotes()
+        self.con.setDatabaseName('data/db/quotes.sqlite')
+        self.all_quotes = []
+
+    def create_quote_block(self):
+        quote_layout = QVBoxLayout()
+        author_layout = QHBoxLayout()
+        quote_layout.addLayout(author_layout)
+
+    def get_database_session(self):
+        return self.con
 
     def show_quotes(self):
         quotes = self.get_quotes_from_db()
