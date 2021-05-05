@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
                              QHBoxLayout, QLabel, QFrame, QGridLayout,
-                             QPushButton, QComboBox, QLayout)
+                             QPushButton, QComboBox, QLayout, QTextBrowser)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5 import uic
 import sys
@@ -34,8 +34,7 @@ class QuoteBrowser(QMainWindow):
         elif text == 'My Quotes':
             self.stackedWidget.setCurrentIndex(2)
 
-    @staticmethod
-    def create_quote(quote, author) -> QFrame:
+    def create_quote(self, quote, author) -> QFrame:
         main_frame = QFrame()
         main_frame_layout = QGridLayout()
         main_frame.setLayout(main_frame_layout)
@@ -58,15 +57,32 @@ class QuoteBrowser(QMainWindow):
         button_frame = QFrame()
         button_layout = QHBoxLayout()
         quote_button_bookmark = QPushButton(
-            'Add to bookmarks' if quote['bookmarked'] == 'FALSE' else 'Remove from bookmarks')
+            'Add to bookmarks' if quote['bookmarked'] == 'False' else 'Remove from bookmarks')
+        quote_button_bookmark.clicked.connect(self.add_quote_to_bookmarks)
         button_layout.addWidget(quote_button_bookmark)
         button_frame.setLayout(button_layout)
 
         main_frame.setFrameShape(QFrame.Box)
         main_frame_layout.addWidget(author_frame, 0, 0)
-        main_frame_layout.addWidget(quote_frame, 1, 0, 2, 1)
-        main_frame_layout.addWidget(button_frame, 3, 0)
+        main_frame_layout.addWidget(quote_frame, 1, 0, 3, 1)
+        main_frame_layout.addWidget(button_frame, 4, 0)
         return main_frame
+
+    def add_quote_to_bookmarks(self):
+        # Get quote block GridLayout where quote Label is stored
+        layout: QGridLayout = self.sender().parentWidget().parentWidget().findChild(QGridLayout)
+        # Get quote Label from GridLayout
+        label = layout.itemAtPosition(1, 0).widget().findChild(QLabel)
+        flag = True if self.sender().text() == 'Add to bookmarks' else False
+        self.con.open()
+        print('hello', flag)
+        QSqlQuery(f"""
+        UPDATE quotes
+        SET bookmarked = "{flag}"
+        WHERE text == "{label.text()}"
+        """)
+        self.con.close()
+        self.load_quotes()
 
     def load_quotes(self):
         quotes = self.get_quotes_from_db()
@@ -77,11 +93,10 @@ class QuoteBrowser(QMainWindow):
         for i in reversed(range(self.bookmarksQuotesLayout.count())):
             self.bookmarksQuotesLayout.itemAt(i).widget().setParent(None)
 
-        print(quotes)
         for quote in quotes:
             quote_author = next((a for a in authors if a['id'] == quote['author_id']), None)
             self.libraryQuotesLayout.addWidget(self.create_quote(quote, quote_author))
-            if quote['bookmarked'] == 'TRUE':
+            if quote['bookmarked'] == 'True':
                 self.bookmarksQuotesLayout.addWidget(self.create_quote(quote, quote_author))
 
     def get_authors_from_db(self):
@@ -106,7 +121,7 @@ class QuoteBrowser(QMainWindow):
         self.con.open()
         bookmark_columns = ['id', 'text', 'author_id']
         query = QSqlQuery()
-        query.exec(f'SELECT {", ".join(bookmark_columns)} FROM quotes WHERE bookmarked == "TRUE"')
+        query.exec(f'SELECT {", ".join(bookmark_columns)} FROM quotes WHERE bookmarked == "True"')
         bookmarks = self.get_query_dict(query, bookmark_columns)
         self.con.close()
         return bookmarks
@@ -115,7 +130,6 @@ class QuoteBrowser(QMainWindow):
     def get_query_dict(query, columns):
         elements = []
         while query.next():
-            print(elements)
             elements.append({key: query.value(key) for key in columns})
         return elements
 
