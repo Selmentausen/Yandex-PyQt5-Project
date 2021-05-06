@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
                              QHBoxLayout, QLabel, QFrame, QGridLayout,
-                            QPushButton, QComboBox, QTextEdit)
+                             QPushButton, QComboBox, QTextEdit)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5 import uic
+import pyperclip
 import sys
 
 
@@ -157,6 +158,9 @@ class QuoteBrowser(QMainWindow):
                 'Add to bookmarks' if quote['bookmarked'] == 'False' else 'Remove from bookmarks')
             quote_button_bookmark.clicked.connect(self.add_quote_to_bookmarks)
             button_layout.addWidget(quote_button_bookmark)
+        quote_button_copy = QPushButton('Copy to clipboard')
+        quote_button_copy.clicked.connect(self.copy_quote)
+        button_layout.addWidget(quote_button_copy)
         button_frame.setLayout(button_layout)
 
         main_frame.setFrameShape(QFrame.Box)
@@ -177,6 +181,10 @@ class QuoteBrowser(QMainWindow):
         self.con.close()
         self.update_quotes()
 
+    def add_quote(self):
+        self.quote_adder = AddQuoteWindow(self.con)
+        self.quote_adder.show()
+
     def delete_quote(self):
         label = self.get_label_from_quote_block(self.sender())
         self.con.open()
@@ -190,6 +198,10 @@ class QuoteBrowser(QMainWindow):
         label = self.get_label_from_quote_block(self.sender())
         self.quote_editter = EditQuoteWindow(self.con, label.text())
         self.quote_editter.show()
+
+    def copy_quote(self):
+        label = self.get_label_from_quote_block(self.sender())
+        pyperclip.copy(label.text())
 
     def update_quotes(self):
         quotes = self.get_quotes_from_db()
@@ -251,9 +263,6 @@ class QuoteBrowser(QMainWindow):
         label = layout.itemAtPosition(1, 0).widget().findChild(QLabel)
         return label
 
-    def add_quote(self):
-        self.quote_adder = AddQuoteWindow(self.con)
-        self.quote_adder.show()
 
 
 def except_hook(cls, exception, traceback):
