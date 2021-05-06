@@ -1,10 +1,35 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
                              QHBoxLayout, QLabel, QFrame, QGridLayout,
-                             QPushButton, QComboBox, QTextEdit)
+                             QPushButton, QComboBox, QTextEdit, QSizePolicy,
+                             QFileDialog)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
+from PyQt5.QtGui import QPixmap
 from PyQt5 import uic
 import pyperclip
 import sys
+from PIL import Image
+
+
+class AuthorWindow(QWidget):
+    def __init__(self, con, author):
+        super(AuthorWindow, self).__init__()
+        uic.loadUi('data/author.ui', self)
+        self.con = con
+        self.author = author
+        self.initUi()
+
+    def initUi(self):
+        self.con.open()
+        query = QSqlQuery("")
+        query.exec(f'SELECT image_path, birthday FROM authors WHERE name == "{self.author}"')
+        query.next()
+        image_path = query.value('image_path')
+        birthday = query.value('birthday')
+        pixmap = QPixmap(image_path)
+        self.imageLabel.setPixmap(pixmap)
+        self.nameLabel.setText(self.author)
+        self.birthdayLabel.setText(birthday)
+        self.con.close()
 
 
 class EditQuoteWindow(QWidget):
@@ -37,12 +62,14 @@ class AddQuoteWindow(QWidget):
         super(AddQuoteWindow, self).__init__()
         uic.loadUi('data/add_quote.ui', self)
         self.con = con
+        self.image_filepath = ''
         self.initUI()
 
     def initUI(self):
         self.isAuthorCheckbox.toggled.connect(self.disable_author_edit)
         self.chooseAuthorComboBox.currentIndexChanged.connect(self.disable_author_edit)
         self.quoteAddButton.clicked.connect(self.add_quote_to_db)
+        self.imagePushButton.clicked.connect(self.get_image)
         self.con.open()
         query = QSqlQuery("SELECT name FROM authors")
         while query.next():
@@ -58,6 +85,12 @@ class AddQuoteWindow(QWidget):
             self.chooseAuthorComboBox.setDisabled(flag)
         self.nameLineEdit.setDisabled(flag)
         self.birthdayDateEdit.setDisabled(flag)
+        self.imagePushButton.setDisabled(flag)
+
+    def get_image(self):
+        self.image_filepath = QFileDialog.getOpenFileName(self, 'Choose picture', '',
+                                                          'Картинка (*.jpg);;Картинка (*.png)')[0]
+        self.imageLabel.setPixmap(QPixmap(self.image_filepath))
 
     def get_data(self):
         data = {'quote': self.quoteTextEdit.toPlainText()}
@@ -79,9 +112,11 @@ class AddQuoteWindow(QWidget):
 
     def add_author_to_db(self, name, birthday):
         self.con.open()
+        filename = self.image_filepath.split('/')[-1]
+        Image.open(self.image_filepath).save(filename)
         QSqlQuery(f"""
-               INSERT INTO authors (name, birthday)
-               VALUES ("{name}", "{birthday}")""")
+               INSERT INTO authors (name, birthday, image_path)
+               VALUES ("{name}", "{birthday}", "{filename}")""")
         self.con.close()
 
     def add_quote_to_db(self):
@@ -133,7 +168,11 @@ class QuoteBrowser(QMainWindow):
 
         author_frame = QFrame()
         author_layout = QHBoxLayout()
-        author_layout.addWidget(QLabel(f"Author: {author['name']}"))
+        author_button = QPushButton(f"Author: {author['name']}")
+        author_button.setFlat(True)
+        author_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        author_button.clicked.connect(self.show_author)
+        author_layout.addWidget(author_button)
         author_layout.addWidget(QLabel(f"Birthday: {author['birthday']}"))
         author_frame.setLayout(author_layout)
 
@@ -248,6 +287,11 @@ class QuoteBrowser(QMainWindow):
         self.con.close()
         return bookmarks
 
+    def show_author(self):
+        name = self.sender().text().split(':')[1].strip()
+        self.author_window = AuthorWindow(self.con, name)
+        self.author_window.show()
+
     @staticmethod
     def get_query_dict(query, columns):
         elements = []
@@ -262,7 +306,6 @@ class QuoteBrowser(QMainWindow):
         # Get quote Label by position from GridLayout
         label = layout.itemAtPosition(1, 0).widget().findChild(QLabel)
         return label
-
 
 
 def except_hook(cls, exception, traceback):

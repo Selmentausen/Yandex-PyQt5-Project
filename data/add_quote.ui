@@ -28,6 +28,22 @@
      </property>
     </widget>
    </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="chooseAuthorLabel">
+     <property name="text">
+      <string>Choose Author</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QComboBox" name="chooseAuthorComboBox">
+     <item>
+      <property name="text">
+       <string>No Author</string>
+      </property>
+     </item>
+    </widget>
+   </item>
    <item row="2" column="0">
     <widget class="QLabel" name="authorLabel">
      <property name="text">
@@ -53,36 +69,51 @@
     <widget class="QDateEdit" name="birthdayDateEdit"/>
    </item>
    <item row="4" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Picture</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="imageLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="imagePushButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Select Image</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0">
     <widget class="QLabel" name="quoteLabel">
      <property name="text">
       <string>Quote</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
+   <item row="5" column="1">
     <widget class="QTextEdit" name="quoteTextEdit"/>
    </item>
-   <item row="5" column="1">
+   <item row="6" column="1">
     <widget class="QPushButton" name="quoteAddButton">
      <property name="text">
       <string>Add</string>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="chooseAuthorLabel">
-     <property name="text">
-      <string>Choose Author</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QComboBox" name="chooseAuthorComboBox">
-     <item>
-      <property name="text">
-       <string>No Author</string>
-      </property>
-     </item>
     </widget>
    </item>
   </layout>
