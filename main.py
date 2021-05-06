@@ -1,9 +1,34 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
                              QHBoxLayout, QLabel, QFrame, QGridLayout,
-                             QPushButton, QComboBox)
+                            QPushButton, QComboBox, QTextEdit)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5 import uic
 import sys
+
+
+class EditQuoteWindow(QWidget):
+    quoteTextEdit: QTextEdit
+
+    def __init__(self, con, quote):
+        super(EditQuoteWindow, self).__init__()
+        uic.loadUi('data/edit_quote.ui', self)
+        self.con = con
+        self.quote = quote
+        self.initUi()
+
+    def initUi(self):
+        self.quoteTextEdit.setText(self.quote)
+        self.submitPushButton.clicked.connect(self.edit_quote)
+
+    def edit_quote(self):
+        self.con.open()
+        QSqlQuery(f"""
+        UPDATE quotes
+        SET text == "{self.quoteTextEdit.toPlainText()}"
+        WHERE text == "{self.quote}"
+""")
+        self.con.close()
+        self.close()
 
 
 class AddQuoteWindow(QWidget):
@@ -70,6 +95,7 @@ class AddQuoteWindow(QWidget):
 
 
 class QuoteBrowser(QMainWindow):
+    quote_editter: EditQuoteWindow
     quote_adder: AddQuoteWindow
 
     def __init__(self):
@@ -84,6 +110,7 @@ class QuoteBrowser(QMainWindow):
         self.libraryButton.clicked.connect(self.change_page)
         self.myQuotesButton.clicked.connect(self.change_page)
         self.addQuoteButton.clicked.connect(self.add_quote)
+        self.refreshPushButton.clicked.connect(self.update_quotes)
         self.exitButton.clicked.connect(self.close)
         self.stackedWidget.currentChanged.connect(self.update_quotes)
         self.update_quotes()
@@ -99,20 +126,20 @@ class QuoteBrowser(QMainWindow):
 
     def create_quote(self, quote, author) -> QFrame:
         main_frame = QFrame()
+        main_frame.setFrameShape(QFrame.Panel)
         main_frame_layout = QGridLayout()
         main_frame.setLayout(main_frame_layout)
 
         author_frame = QFrame()
-        author_frame.setFrameShape(QFrame.Panel)
         author_layout = QHBoxLayout()
         author_layout.addWidget(QLabel(f"Author: {author['name']}"))
         author_layout.addWidget(QLabel(f"Birthday: {author['birthday']}"))
         author_frame.setLayout(author_layout)
 
         quote_frame = QFrame()
-        quote_frame.setFrameShape(QFrame.Panel)
+        quote_frame.setStyleSheet("QLabel {background-color: white; font-style: italic;}")
         quote_layout = QVBoxLayout()
-        text = QLabel(quote['text'])
+        text = QLabel(f"{quote['text']}")
         quote_layout.addWidget(text)
         quote_frame.setLayout(quote_layout)
 
@@ -134,7 +161,7 @@ class QuoteBrowser(QMainWindow):
 
         main_frame.setFrameShape(QFrame.Box)
         main_frame_layout.addWidget(author_frame, 0, 0)
-        main_frame_layout.addWidget(quote_frame, 1, 0, 3, 1)
+        main_frame_layout.addWidget(quote_frame, 1, 0, 3, 0)
         main_frame_layout.addWidget(button_frame, 4, 0)
         return main_frame
 
@@ -160,7 +187,9 @@ class QuoteBrowser(QMainWindow):
         self.update_quotes()
 
     def edit_quote(self):
-        pass    # TODO implement ability to edit quotes
+        label = self.get_label_from_quote_block(self.sender())
+        self.quote_editter = EditQuoteWindow(self.con, label.text())
+        self.quote_editter.show()
 
     def update_quotes(self):
         quotes = self.get_quotes_from_db()

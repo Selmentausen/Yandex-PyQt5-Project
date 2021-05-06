@@ -98,7 +98,29 @@
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="ViewLayout" stretch="0">
+     <layout class="QVBoxLayout" name="ViewLayout" stretch="0,0">
+      <item>
+       <widget class="QPushButton" name="refreshPushButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::RightToLeft</enum>
+        </property>
+        <property name="text">
+         <string>⟳</string>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>8</width>
+          <height>8</height>
+         </size>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
@@ -152,7 +174,7 @@
                <x>0</x>
                <y>0</y>
                <width>745</width>
-               <height>507</height>
+               <height>478</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -199,7 +221,7 @@
                <x>0</x>
                <y>0</y>
                <width>745</width>
-               <height>507</height>
+               <height>478</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -257,7 +279,7 @@
                <x>0</x>
                <y>0</y>
                <width>745</width>
-               <height>476</height>
+               <height>447</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_9">
