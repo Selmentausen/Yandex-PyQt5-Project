@@ -6,13 +6,13 @@ from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5 import uic
+from PIL import Image
+from random import choice
 import pyperclip
 import sys
-from PIL import Image
-
-from pprint import pprint
 
 
+# noinspection PyUnresolvedReferences
 class SortQuotes(QWidget):
     trigger = pyqtSignal(str, bool)
 
@@ -171,6 +171,8 @@ class QuoteBrowser(QMainWindow):
         self.addQuoteButton.clicked.connect(self.add_quote)
         self.refreshPushButton.clicked.connect(self.update_quotes)
         self.sortPushButton.clicked.connect(self.open_sort_window)
+        self.randomQuotePushButton.clicked.connect(self.random_quote)
+        self.randomQuotePushButton.clicked.connect(self.change_page)
         self.exitButton.clicked.connect(self.close)
         self.stackedWidget.currentChanged.connect(self.update_quotes)
         self.update_quotes()
@@ -183,6 +185,8 @@ class QuoteBrowser(QMainWindow):
             self.stackedWidget.setCurrentIndex(1)
         elif text == 'My Quotes':
             self.stackedWidget.setCurrentIndex(2)
+        elif text == 'Random Quote':
+            self.stackedWidget.setCurrentIndex(3)
 
     def create_quote(self, quote, author) -> QFrame:
         main_frame = QFrame()
@@ -284,7 +288,7 @@ class QuoteBrowser(QMainWindow):
         authors = self.get_authors_from_db()
         quotes = self.sort_quotes(quotes, authors, self.sort, self.reverse)
 
-        self.clear_quote_layouts()
+        self.clear_quote_layouts([self.libraryQuotesLayout, self.bookmarksQuotesLayout, self.myQuotesLayout])
         for quote in quotes:
             quote_author = next((a for a in authors if a['id'] == quote['author_id']), None)
             self.libraryQuotesLayout.addWidget(self.create_quote(quote, quote_author))
@@ -293,8 +297,16 @@ class QuoteBrowser(QMainWindow):
             if quote_author['name'] == 'You':
                 self.myQuotesLayout.addWidget(self.create_quote(quote, quote_author))
 
-    def clear_quote_layouts(self):
-        for layout in [self.libraryQuotesLayout, self.bookmarksQuotesLayout, self.myQuotesLayout]:
+    def random_quote(self):
+        self.clear_quote_layouts([self.randomQuoteLayout])
+        random_quote = choice(self.get_quotes_from_db())
+        authors = self.get_authors_from_db()
+        quote_author = next((a for a in authors if a['id'] == random_quote['author_id']), None)
+        self.randomQuoteLayout.addWidget(self.create_quote(random_quote, quote_author))
+
+    @staticmethod
+    def clear_quote_layouts(layouts):
+        for layout in layouts:
             for i in reversed(range(layout.count())):
                 layout.itemAt(i).widget().setParent(None)
 

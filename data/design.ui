@@ -176,7 +176,7 @@
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>3</number>
         </property>
         <widget class="QWidget" name="LibraryPage">
          <property name="enabled">
@@ -272,8 +272,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>745</width>
-               <height>478</height>
+               <width>723</width>
+               <height>476</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -330,13 +330,60 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>745</width>
-               <height>447</height>
+               <width>723</width>
+               <height>445</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_9">
               <item>
                <layout class="QVBoxLayout" name="myQuotesLayout"/>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="randomQuotePage">
+         <layout class="QVBoxLayout" name="verticalLayout_8">
+          <item>
+           <layout class="QVBoxLayout" name="randomQuoteInstrumentLayout">
+            <item>
+             <widget class="QLabel" name="randomQuoteLabel">
+              <property name="font">
+               <font>
+                <pointsize>16</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Random Quote</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QScrollArea" name="scrollArea_4">
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetRandomQuote">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>723</width>
+               <height>476</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_11">
+              <item>
+               <layout class="QVBoxLayout" name="randomQuoteLayout"/>
               </item>
              </layout>
             </widget>
