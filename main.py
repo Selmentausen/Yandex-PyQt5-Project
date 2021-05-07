@@ -51,14 +51,17 @@ class AuthorWindow(QWidget):
         self.con.close()
 
 
+# noinspection PyUnresolvedReferences
 class EditQuoteWindow(QWidget):
     quoteTextEdit: QTextEdit
+    trigger = pyqtSignal()
 
-    def __init__(self, con, quote):
+    def __init__(self, con, quote, parent):
         super(EditQuoteWindow, self).__init__()
         uic.loadUi('data/edit_quote.ui', self)
         self.con = con
         self.quote = quote
+        self.trigger.connect(parent.update_quotes_slot)
         self.initUi()
 
     def initUi(self):
@@ -74,14 +77,19 @@ class EditQuoteWindow(QWidget):
 """)
         self.con.close()
         self.close()
+        self.trigger.emit()
 
 
+# noinspection PyUnresolvedReferences
 class AddQuoteWindow(QWidget):
-    def __init__(self, con):
+    trigger = pyqtSignal()
+
+    def __init__(self, con, parent):
         super(AddQuoteWindow, self).__init__()
         uic.loadUi('data/add_quote.ui', self)
         self.con = con
         self.image_filepath = ''
+        self.trigger.connect(parent.update_quotes_slot)
         self.initUI()
 
     def initUI(self):
@@ -146,6 +154,7 @@ class AddQuoteWindow(QWidget):
         VALUES ("{data['quote']}", (SELECT id FROM authors WHERE name == "{data['name']}"), "False", "True")
         """)
         self.con.close()
+        self.trigger.emit()
         self.close()
 
 
@@ -249,7 +258,7 @@ class QuoteBrowser(QMainWindow):
         self.update_quotes()
 
     def add_quote(self):
-        self.quote_adder = AddQuoteWindow(self.con)
+        self.quote_adder = AddQuoteWindow(self.con, self)
         self.quote_adder.show()
 
     def delete_quote(self):
@@ -263,7 +272,7 @@ class QuoteBrowser(QMainWindow):
 
     def edit_quote(self):
         label = self.get_label_from_quote_block(self.sender())
-        self.quote_editter = EditQuoteWindow(self.con, label.text())
+        self.quote_editter = EditQuoteWindow(self.con, label.text(), self)
         self.quote_editter.show()
 
     def copy_quote(self):
@@ -279,7 +288,6 @@ class QuoteBrowser(QMainWindow):
         elif sort_method == 'quote':
             quotes = sorted(quotes, key=lambda q: q['text'])
         if reverse:
-            print('reversing')
             quotes = reversed(quotes)
         return quotes
 
@@ -361,6 +369,10 @@ class QuoteBrowser(QMainWindow):
     def get_sort_data(self, sort_method, reverse):
         self.sort = '_'.join(sort_method.split()[2:])
         self.reverse = reverse
+        self.update_quotes()
+
+    @pyqtSlot()
+    def update_quotes_slot(self):
         self.update_quotes()
 
     def open_sort_window(self):
