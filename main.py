@@ -4,10 +4,29 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
                              QFileDialog)
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5 import uic
 import pyperclip
 import sys
 from PIL import Image
+
+from pprint import pprint
+
+
+class SortQuotes(QWidget):
+    trigger = pyqtSignal(str, bool)
+
+    def __init__(self, parent):
+        super(SortQuotes, self).__init__()
+        uic.loadUi('data/sort_quotes.ui', self)
+        self.trigger.connect(parent.get_sort_data)
+        self.submitPushButton.clicked.connect(self.get_data)
+
+    def get_data(self):
+        sort_method = next((b.text() for b in self.buttonGroup.buttons() if b.isChecked()), None)
+        reverse = self.reverseCheckBox.isChecked()
+        self.trigger.emit(sort_method, reverse)
+        self.close()
 
 
 class AuthorWindow(QWidget):
@@ -131,14 +150,18 @@ class AddQuoteWindow(QWidget):
 
 
 class QuoteBrowser(QMainWindow):
+    author_window: AuthorWindow
     quote_editter: EditQuoteWindow
     quote_adder: AddQuoteWindow
+    quote_sort: SortQuotes
 
     def __init__(self):
         super(QuoteBrowser, self).__init__()
         uic.loadUi('data/design.ui', self)
         self.con = QSqlDatabase.addDatabase("QSQLITE")
         self.con.setDatabaseName('data/db/quotes_db.sqlite')
+        self.sort = ''
+        self.reverse = False
         self.initUi()
 
     def initUi(self):
@@ -147,6 +170,7 @@ class QuoteBrowser(QMainWindow):
         self.myQuotesButton.clicked.connect(self.change_page)
         self.addQuoteButton.clicked.connect(self.add_quote)
         self.refreshPushButton.clicked.connect(self.update_quotes)
+        self.sortPushButton.clicked.connect(self.open_sort_window)
         self.exitButton.clicked.connect(self.close)
         self.stackedWidget.currentChanged.connect(self.update_quotes)
         self.update_quotes()
@@ -242,9 +266,23 @@ class QuoteBrowser(QMainWindow):
         label = self.get_label_from_quote_block(self.sender())
         pyperclip.copy(label.text())
 
+    @staticmethod
+    def sort_quotes(quotes, authors, sort_method, reverse):
+        if sort_method == 'author_name':
+            quotes = sorted(quotes, key=lambda q: next((a['name'] for a in authors if a['id'] == q['author_id']), None))
+        elif sort_method == 'user_added':
+            quotes = list(reversed(sorted(quotes, key=lambda q: q['user_added'])))
+        elif sort_method == 'quote':
+            quotes = sorted(quotes, key=lambda q: q['text'])
+        if reverse:
+            print('reversing')
+            quotes = reversed(quotes)
+        return quotes
+
     def update_quotes(self):
         quotes = self.get_quotes_from_db()
         authors = self.get_authors_from_db()
+        quotes = self.sort_quotes(quotes, authors, self.sort, self.reverse)
 
         self.clear_quote_layouts()
         for quote in quotes:
@@ -306,6 +344,16 @@ class QuoteBrowser(QMainWindow):
         # Get quote Label by position from GridLayout
         label = layout.itemAtPosition(1, 0).widget().findChild(QLabel)
         return label
+
+    @pyqtSlot(str, bool)
+    def get_sort_data(self, sort_method, reverse):
+        self.sort = '_'.join(sort_method.split()[2:])
+        self.reverse = reverse
+        self.update_quotes()
+
+    def open_sort_window(self):
+        self.quote_sort = SortQuotes(self)
+        self.quote_sort.show()
 
 
 def except_hook(cls, exception, traceback):
