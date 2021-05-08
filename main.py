@@ -5,22 +5,22 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget,
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
-from PyQt5 import uic
 from PIL import Image
 from random import choice
 import pyperclip
 import sys
+from data.design import sort_quotes_ui, author_ui, edit_quote_ui, quote_browser_ui, add_quote_ui
 
 
 # noinspection PyUnresolvedReferences
-class SortQuotes(QWidget):
+class SortQuotes(QWidget, sort_quotes_ui.Ui_Form):
     trigger = pyqtSignal(str, bool)
 
     def __init__(self, parent):
         super(SortQuotes, self).__init__()
-        uic.loadUi('data/sort_quotes.ui', self)
-        self.trigger.connect(parent.get_sort_data)
+        self.trigger.connect(parent.sort_quotes_slot)
         self.submitPushButton.clicked.connect(self.get_data)
+        self.setupUi(self)
 
     def get_data(self):
         sort_method = next((b.text() for b in self.buttonGroup.buttons() if b.isChecked()), None)
@@ -29,10 +29,10 @@ class SortQuotes(QWidget):
         self.close()
 
 
-class AuthorWindow(QWidget):
+class AuthorWindow(QWidget, author_ui.Ui_Form):
     def __init__(self, con, author):
         super(AuthorWindow, self).__init__()
-        uic.loadUi('data/author.ui', self)
+        self.setupUi(self)
         self.con = con
         self.author = author
         self.initUi()
@@ -52,13 +52,13 @@ class AuthorWindow(QWidget):
 
 
 # noinspection PyUnresolvedReferences
-class EditQuoteWindow(QWidget):
+class EditQuoteWindow(QWidget, edit_quote_ui.Ui_Form):
     quoteTextEdit: QTextEdit
     trigger = pyqtSignal()
 
     def __init__(self, con, quote, parent):
         super(EditQuoteWindow, self).__init__()
-        uic.loadUi('data/edit_quote.ui', self)
+        self.setupUi(self)
         self.con = con
         self.quote = quote
         self.trigger.connect(parent.update_quotes_slot)
@@ -81,12 +81,12 @@ class EditQuoteWindow(QWidget):
 
 
 # noinspection PyUnresolvedReferences
-class AddQuoteWindow(QWidget):
+class AddQuoteWindow(QWidget, add_quote_ui.Ui_Form):
     trigger = pyqtSignal()
 
     def __init__(self, con, parent):
         super(AddQuoteWindow, self).__init__()
-        uic.loadUi('data/add_quote.ui', self)
+        self.setupUi(self)
         self.con = con
         self.image_filepath = ''
         self.trigger.connect(parent.update_quotes_slot)
@@ -96,6 +96,7 @@ class AddQuoteWindow(QWidget):
         self.isAuthorCheckbox.toggled.connect(self.disable_author_edit)
         self.chooseAuthorComboBox.currentIndexChanged.connect(self.disable_author_edit)
         self.quoteAddButton.clicked.connect(self.add_quote_to_db)
+        self.quoteAddButton.setDisabled(True)
         self.imagePushButton.clicked.connect(self.get_image)
         self.con.open()
         query = QSqlQuery("SELECT name FROM authors")
@@ -150,15 +151,15 @@ class AddQuoteWindow(QWidget):
         data = self.get_data()
         self.con.open()
         QSqlQuery(f"""
-        INSERT INTO quotes (text, author_id, bookmarked, user_added)
-        VALUES ("{data['quote']}", (SELECT id FROM authors WHERE name == "{data['name']}"), "False", "True")
+        INSERT INTO quotes (text, author_id, user_added)
+        VALUES ("{data['quote']}", (SELECT id FROM authors WHERE name == "{data['name']}"), {int(True)})
         """)
         self.con.close()
         self.trigger.emit()
         self.close()
 
 
-class QuoteBrowser(QMainWindow):
+class QuoteBrowser(QMainWindow, quote_browser_ui.Ui_MainWindow):
     author_window: AuthorWindow
     quote_editter: EditQuoteWindow
     quote_adder: AddQuoteWindow
@@ -166,14 +167,15 @@ class QuoteBrowser(QMainWindow):
 
     def __init__(self):
         super(QuoteBrowser, self).__init__()
-        uic.loadUi('data/design.ui', self)
+        self.setupUi(self)
         self.con = QSqlDatabase.addDatabase("QSQLITE")
         self.con.setDatabaseName('data/db/quotes_db.sqlite')
-        self.sort = ''
+        self.sort = 'authors.name'
         self.reverse = False
         self.initUi()
 
     def initUi(self):
+        self.logoLabel.setPixmap(QPixmap("data/img/logo.png"))
         self.bookmarksButton.clicked.connect(self.change_page)
         self.libraryButton.clicked.connect(self.change_page)
         self.myQuotesButton.clicked.connect(self.change_page)
@@ -197,7 +199,7 @@ class QuoteBrowser(QMainWindow):
         elif text == 'Random Quote':
             self.stackedWidget.setCurrentIndex(3)
 
-    def create_quote(self, quote, author) -> QFrame:
+    def create_quote(self, quote) -> QFrame:
         main_frame = QFrame()
         main_frame.setFrameShape(QFrame.Panel)
         main_frame_layout = QGridLayout()
@@ -205,12 +207,12 @@ class QuoteBrowser(QMainWindow):
 
         author_frame = QFrame()
         author_layout = QHBoxLayout()
-        author_button = QPushButton(f"Author: {author['name']}")
-        author_button.setFlat(True)
+        author_button = QPushButton(f"Author: {quote['name']}")
+        # author_button.setFlat(True)
         author_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         author_button.clicked.connect(self.show_author)
         author_layout.addWidget(author_button)
-        author_layout.addWidget(QLabel(f"Birthday: {author['birthday']}"))
+        author_layout.addWidget(QLabel(f"Birthday: {quote['birthday']}"))
         author_frame.setLayout(author_layout)
 
         quote_frame = QFrame()
@@ -222,16 +224,16 @@ class QuoteBrowser(QMainWindow):
 
         button_frame = QFrame()
         button_layout = QHBoxLayout()
-        if quote['user_added'] == 'True':
+        if quote['user_added']:
             quote_button_delete = QPushButton('Delete quote')
             quote_button_delete.clicked.connect(self.delete_quote)
             quote_button_edit = QPushButton('Edit quote')
             quote_button_edit.clicked.connect(self.edit_quote)
             button_layout.addWidget(quote_button_delete)
             button_layout.addWidget(quote_button_edit)
-        if author['name'] != 'You':
+        if quote['name'] != 'You':
             quote_button_bookmark = QPushButton(
-                'Add to bookmarks' if quote['bookmarked'] == 'False' else 'Remove from bookmarks')
+                'Add to bookmarks' if not quote['bookmarked'] else 'Remove from bookmarks')
             quote_button_bookmark.clicked.connect(self.add_quote_to_bookmarks)
             button_layout.addWidget(quote_button_bookmark)
         quote_button_copy = QPushButton('Copy to clipboard')
@@ -251,7 +253,7 @@ class QuoteBrowser(QMainWindow):
         self.con.open()
         QSqlQuery(f"""
         UPDATE quotes
-        SET bookmarked = "{flag}"
+        SET bookmarked = {int(flag)}
         WHERE text == "{label.text()}"
         """)
         self.con.close()
@@ -279,38 +281,20 @@ class QuoteBrowser(QMainWindow):
         label = self.get_label_from_quote_block(self.sender())
         pyperclip.copy(label.text())
 
-    @staticmethod
-    def sort_quotes(quotes, authors, sort_method, reverse):
-        if sort_method == 'author_name':
-            quotes = sorted(quotes, key=lambda q: next((a['name'] for a in authors if a['id'] == q['author_id']), None))
-        elif sort_method == 'user_added':
-            quotes = list(reversed(sorted(quotes, key=lambda q: q['user_added'])))
-        elif sort_method == 'quote':
-            quotes = sorted(quotes, key=lambda q: q['text'])
-        if reverse:
-            quotes = reversed(quotes)
-        return quotes
-
     def update_quotes(self):
-        quotes = self.get_quotes_from_db()
-        authors = self.get_authors_from_db()
-        quotes = self.sort_quotes(quotes, authors, self.sort, self.reverse)
-
+        data = self.get_data_from_db()
         self.clear_quote_layouts([self.libraryQuotesLayout, self.bookmarksQuotesLayout, self.myQuotesLayout])
-        for quote in quotes:
-            quote_author = next((a for a in authors if a['id'] == quote['author_id']), None)
-            self.libraryQuotesLayout.addWidget(self.create_quote(quote, quote_author))
-            if quote['bookmarked'] == 'True':
-                self.bookmarksQuotesLayout.addWidget(self.create_quote(quote, quote_author))
-            if quote_author['name'] == 'You':
-                self.myQuotesLayout.addWidget(self.create_quote(quote, quote_author))
+        for quote in data:
+            self.libraryQuotesLayout.addWidget(self.create_quote(quote))
+            if quote['bookmarked']:
+                self.bookmarksQuotesLayout.addWidget(self.create_quote(quote))
+            if quote['name'] == 'You':
+                self.myQuotesLayout.addWidget(self.create_quote(quote))
 
     def random_quote(self):
         self.clear_quote_layouts([self.randomQuoteLayout])
-        random_quote = choice(self.get_quotes_from_db())
-        authors = self.get_authors_from_db()
-        quote_author = next((a for a in authors if a['id'] == random_quote['author_id']), None)
-        self.randomQuoteLayout.addWidget(self.create_quote(random_quote, quote_author))
+        random_quote = choice(self.get_data_from_db())
+        self.randomQuoteLayout.addWidget(self.create_quote(random_quote))
 
     @staticmethod
     def clear_quote_layouts(layouts):
@@ -318,29 +302,26 @@ class QuoteBrowser(QMainWindow):
             for i in reversed(range(layout.count())):
                 layout.itemAt(i).widget().setParent(None)
 
-    def get_authors_from_db(self):
+    def get_data_from_db(self):
         self.con.open()
-        query = QSqlQuery()
-        author_columns = ['id', 'name', 'image_path', 'birthday']
-        query.exec(f'SELECT {", ".join(author_columns)} FROM authors')
-        authors = self.get_query_dict(query, author_columns)
-        self.con.close()
-        return authors
-
-    def get_quotes_from_db(self):
-        self.con.open()
-        quote_columns = ['id', 'text', 'bookmarked', 'author_id', 'user_added']
-        query = QSqlQuery()
-        query.exec(f'SELECT {", ".join(quote_columns)} FROM quotes')
-        quotes = self.get_query_dict(query, quote_columns)
-        self.con.close()
-        return quotes
+        quote_columns = ['quotes.text', 'quotes.bookmarked', 'quotes.user_added',
+                         'authors.name', 'authors.image_path', 'authors.birthday']
+        query = QSqlQuery(f"""
+        SELECT {', '.join(quote_columns)} 
+        FROM quotes
+        INNER JOIN authors ON quotes.author_id = authors.id       
+        ORDER BY {self.sort} {'DESC' if self.reverse else 'ASC'}
+""")
+        data = []
+        while query.next():
+            data.append({key.split('.')[-1]: query.value(key) for key in quote_columns})
+        return data
 
     def get_bookmarks_from_db(self):
         self.con.open()
         bookmark_columns = ['id', 'text', 'author_id']
         query = QSqlQuery()
-        query.exec(f'SELECT {", ".join(bookmark_columns)} FROM quotes WHERE bookmarked == "True"')
+        query.exec(f'SELECT {", ".join(bookmark_columns)} FROM quotes WHERE bookmarked = 1')
         bookmarks = self.get_query_dict(query, bookmark_columns)
         self.con.close()
         return bookmarks
@@ -366,8 +347,14 @@ class QuoteBrowser(QMainWindow):
         return label
 
     @pyqtSlot(str, bool)
-    def get_sort_data(self, sort_method, reverse):
-        self.sort = '_'.join(sort_method.split()[2:])
+    def sort_quotes_slot(self, sort_method, reverse):
+        if 'user' in sort_method:
+            sort = 'quotes.user_added'
+        elif 'quote' in sort_method:
+            sort = 'quotes.text'
+        else:   # default method of sorting
+            sort = 'authors.name'
+        self.sort = sort
         self.reverse = reverse
         self.update_quotes()
 
